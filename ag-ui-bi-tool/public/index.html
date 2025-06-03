@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AG-UI Business Intelligence Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .example-queries-section {
+      margin-bottom: 20px;
+      background-color: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .example-queries-section h3 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #333;
+    }
+    .query-category {
+      margin-bottom: 15px;
+    }
+    .query-category h4 {
+      margin-bottom: 10px;
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .query-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .example-query-button {
+      background-color: #f1f9ff;
+      border: 1px solid #3498db;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .example-query-button:hover {
+      background-color: #d4e9f7;
+    }
+    .query-section {
+      background-color: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    .query-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .query-button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .query-button:hover {
+      background-color: #2980b9;
+    }
+    .results-section {
+      background-color: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      min-height: 300px;
+    }
+    .message {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .assistant-message {
+      background-color: #f1f9ff;
+      border-left: 4px solid #3498db;
+    }
+    .visualization {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 4px;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    #chart-container {
+      width: 100%;
+      height: 400px;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>AG-UI Business Intelligence Tool</h1>
+    <p>Powered by Mastra Agent and AG-UI Protocol</p>
+  </header>
+
+  <div class="container">
+    <div class="example-queries-section">
+      <h3>Example Queries</h3>
+      <div class="query-categories">
+        <!-- Categories will be dynamically generated here -->
+      </div>
+    </div>
+    
+    <div class="query-section">
+      <h2>Ask a Question</h2>
+      <input type="text" id="query-input" class="query-input" placeholder="e.g., Show me a bar chart of sales by region">
+      <button id="query-button" class="query-button">Submit Query</button>
+    </div>
+
+    <div class="results-section" id="results">
+      <p>Enter a query above to get started.</p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Example queries organized by category
+      const exampleQueries = {
+        'Bar Charts': [
+          'Show me a bar chart of sales by region',
+          'Create a bar chart of product categories by revenue',
+          'Display monthly expenses as a bar chart'
+        ],
+        'Line Charts': [
+          'Show me a line chart of website traffic over the past week',
+          'Create a line chart of stock prices over time',
+          'Display quarterly revenue trends as a line chart'
+        ],
+        'Pie Charts': [
+          'Show me a pie chart of market share by company',
+          'Create a pie chart of budget allocation',
+          'Display customer demographics as a pie chart'
+        ],
+        'Tables': [
+          'Show me a table of top customers by revenue',
+          'Create a table of inventory status',
+          'Display employee performance metrics as a table'
+        ]
+      };
+
+      const queryInput = document.getElementById('query-input');
+      const queryButton = document.getElementById('query-button');
+      const resultsSection = document.getElementById('results');
+      const queryCategoriesContainer = document.querySelector('.query-categories');
+      let chartInstance = null;
+
+      // Render example queries when the page loads
+      renderExampleQueries();
+
+      queryButton.addEventListener('click', async () => {
+        const query = queryInput.value.trim();
+        
+        if (!query) {
+          alert('Please enter a query');
+          return;
+        }
+
+        // Clear previous results
+        resultsSection.innerHTML = '<div class="loading">Processing your query...</div>';
+        
+        // Create chart container if needed
+        if (!document.getElementById('chart-container')) {
+          const chartContainer = document.createElement('div');
+          chartContainer.id = 'chart-container';
+          resultsSection.appendChild(chartContainer);
+        }
+
+        try {
+          // Send query to server
+          const response = await fetch('/api/query', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to get response from server');
+          }
+
+          // Set up event source for streaming response
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let currentMessageId = null;
+          let messageContent = '';
+
+          // Clear loading message
+          resultsSection.innerHTML = '';
+
+          // Process the stream
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              break;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+            
+            // Process complete events in the buffer
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const eventData = JSON.parse(line.substring(6));
+                processEvent(eventData);
+              }
+            }
+          }
+        } catch (error) {
+          resultsSection.innerHTML = `<div class="message">Error: ${error.message}</div>`;
+        }
+      });
+
+      function processEvent(event) {
+        switch (event.type) {
+          case 'TEXT_MESSAGE_START':
+            currentMessageId = event.messageId;
+            messageContent = '';
+            
+            // Create a new message element
+            const messageElement = document.createElement('div');
+            messageElement.id = `message-${currentMessageId}`;
+            messageElement.className = 'message assistant-message';
+            resultsSection.appendChild(messageElement);
+            break;
+            
+          case 'TEXT_MESSAGE_CONTENT':
+            if (event.messageId === currentMessageId) {
+              messageContent += event.delta;
+              document.getElementById(`message-${currentMessageId}`).innerHTML = messageContent;
+            }
+            break;
+            
+          case 'TOOL_CALL_START':
+            // Create visualization container
+            const vizContainer = document.createElement('div');
+            vizContainer.id = `tool-${event.toolCallId}`;
+            vizContainer.className = 'visualization';
+            resultsSection.appendChild(vizContainer);
+            break;
+            
+          case 'TOOL_CALL_ARGS':
+            try {
+              const toolData = JSON.parse(event.delta);
+              renderVisualization(event.toolCallId, toolData);
+            } catch (error) {
+              console.error('Error parsing tool call args:', error);
+            }
+            break;
+            
+          case 'RUN_ERROR':
+            resultsSection.innerHTML += `<div class="message">Error: ${event.message}</div>`;
+            break;
+        }
+      }
+
+      function renderVisualization(toolCallId, data) {
+        const container = document.getElementById(`tool-${toolCallId}`);
+        
+        if (!container) {
+          console.error('Visualization container not found');
+          return;
+        }
+
+        switch (data.type) {
+          case 'chart':
+            renderChart(container, data);
+            break;
+          case 'table':
+            renderTable(container, data);
+            break;
+          case 'map':
+            renderMap(container, data);
+            break;
+          default:
+            container.innerHTML = `<p>Unsupported visualization type: ${data.type}</p>`;
+        }
+      }
+
+      // Function to render example queries
+      function renderExampleQueries() {
+        // Clear existing content
+        queryCategoriesContainer.innerHTML = '';
+        
+        // Create category sections
+        Object.entries(exampleQueries).forEach(([category, queries]) => {
+          const categorySection = document.createElement('div');
+          categorySection.className = 'query-category';
+          
+          // Add category title
+          const categoryTitle = document.createElement('h4');
+          categoryTitle.textContent = category;
+          categorySection.appendChild(categoryTitle);
+          
+          // Add query buttons container
+          const buttonsContainer = document.createElement('div');
+          buttonsContainer.className = 'query-buttons';
+          
+          // Add buttons for each query
+          queries.forEach(query => {
+            const button = document.createElement('button');
+            button.className = 'example-query-button';
+            button.textContent = query;
+            button.addEventListener('click', () => submitExampleQuery(query));
+            buttonsContainer.appendChild(button);
+          });
+          
+          categorySection.appendChild(buttonsContainer);
+          queryCategoriesContainer.appendChild(categorySection);
+        });
+      }
+      
+      // Function to submit an example query
+      function submitExampleQuery(query) {
+        // Set the query input value
+        queryInput.value = query;
+        
+        // Trigger the query button click
+        queryButton.click();
+      }
+
+      function renderChart(container, data) {
+        // Create canvas for Chart.js
+        const canvas = document.createElement('canvas');
+        container.appendChild(canvas);
+
+        // Destroy previous chart if it exists
+        if (chartInstance) {
+          chartInstance.destroy();
+        }
+
+        // Extract data for Chart.js
+        const labels = data.data.map(item => item.category);
+        const values = data.data.map(item => item.value);
+        
+        // Determine chart type (default to bar if not specified)
+        const chartType = data.options?.chartType || 'bar';
+        
+        // Configure datasets based on chart type
+        let datasets = [{
+          label: data.options.title || 'Data',
+          data: values,
+          backgroundColor: [
+            'rgba(54, 162, 235, 0.5)',
+            'rgba(255, 99, 132, 0.5)',
+            'rgba(255, 206, 86, 0.5)',
+            'rgba(75, 192, 192, 0.5)',
+            'rgba(153, 102, 255, 0.5)',
+          ],
+          borderColor: [
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 99, 132, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+          ],
+          borderWidth: 1
+        }];
+        
+        // For line charts, use a single color
+        if (chartType === 'line') {
+          datasets[0].backgroundColor = 'rgba(54, 162, 235, 0.2)';
+          datasets[0].borderColor = 'rgba(54, 162, 235, 1)';
+          datasets[0].fill = true;
+          datasets[0].tension = 0.4;
+        }
+
+        // Create chart configuration
+        const chartConfig = {
+          type: chartType,
+          data: {
+            labels: labels,
+            datasets: datasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        };
+        
+        // For pie charts, remove scales
+        if (chartType === 'pie') {
+          delete chartConfig.options.scales;
+        }
+
+        // Create chart
+        chartInstance = new Chart(canvas, chartConfig);
+      }
+
+      function renderTable(container, data) {
+        // Create table element
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        
+        // Create header row
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        
+        // Assuming first item has all the keys we need
+        const keys = Object.keys(data.data[0]);
+        
+        keys.forEach(key => {
+          const th = document.createElement('th');
+          th.textContent = key;
+          th.style.padding = '8px';
+          th.style.borderBottom = '2px solid #ddd';
+          th.style.textAlign = 'left';
+          headerRow.appendChild(th);
+        });
+        
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Create table body
+        const tbody = document.createElement('tbody');
+        
+        data.data.forEach(item => {
+          const row = document.createElement('tr');
+          
+          keys.forEach(key => {
+            const td = document.createElement('td');
+            td.textContent = item[key];
+            td.style.padding = '8px';
+            td.style.borderBottom = '1px solid #ddd';
+            row.appendChild(td);
+          });
+          
+          tbody.appendChild(row);
+        });
+        
+        table.appendChild(tbody);
+        container.appendChild(table);
+      }
+
+      function renderMap(container, data) {
+        // For simplicity, just show a placeholder for map visualization
+        container.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
+            <p>Map visualization would be displayed here.</p>
+            <p>Data points: ${data.data.length}</p>
+          </div>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>
